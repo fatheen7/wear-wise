@@ -1,7 +1,9 @@
 'use client';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { MapPin, Loader2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { LocationInfo } from '@/lib/types';
 import BottomNav from '@/components/BottomNav';
 
 export default function ProfilePage() {
@@ -16,24 +18,76 @@ export default function ProfilePage() {
   const resetAll = useStore((s) => s.resetAll);
 
   const [name, setName] = useState(user.name);
-  const [locName, setLocName] = useState(location.name);
   const [savedTick, setSavedTick] = useState(false);
 
+  // Location editing: a free-text field can't update the coordinates the
+  // weather lookup actually uses (that was the bug — typing a new city
+  // relabeled the old lat/lon instead of geocoding a new one). This now
+  // mirrors onboarding's flow: search returns real coordinates, and only
+  // picking a result changes location. The current location is shown
+  // read-only above the search so it's clear what's actually in effect.
+  const [locQuery, setLocQuery] = useState('');
+  const [locResults, setLocResults] = useState<LocationInfo[]>([]);
+  const [locLoading, setLocLoading] = useState(false);
+  const [locSavedTick, setLocSavedTick] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // The store persists to localStorage and rehydrates asynchronously after
-  // mount. Until hasHydrated flips true, `user`/`location` are still the
-  // pre-hydration defaults, so this form's local state — seeded once above
-  // — would otherwise show blank/default values and silently overwrite the
-  // real saved data on Save. Re-sync as soon as hydration completes.
+  // mount. Until hasHydrated flips true, `user` is still the pre-hydration
+  // default, so this form's local state — seeded once above — would
+  // otherwise show a blank value and silently overwrite the real saved
+  // name on Save. Re-sync as soon as hydration completes.
   useEffect(() => {
     if (!hasHydrated) return;
     setName(user.name);
-    setLocName(location.name);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated]);
 
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (locQuery.trim().length < 2) { setLocResults([]); return; }
+    debounceRef.current = setTimeout(async () => {
+      setLocLoading(true);
+      try {
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(locQuery)}`);
+        const data = await res.json();
+        setLocResults(data.results || []);
+      } catch { setLocResults([]); }
+      setLocLoading(false);
+    }, 350);
+  }, [locQuery]);
+
+  function pickLocation(loc: LocationInfo) {
+    setLocation(loc);
+    setLocQuery('');
+    setLocResults([]);
+    setLocSavedTick(true);
+    setTimeout(() => setLocSavedTick(false), 1500);
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) return;
+    setLocLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const res = await fetch(`/api/geocode?lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          const name = data.results?.[0]?.name || 'Current location';
+          pickLocation({ name, lat: latitude, lon: longitude });
+        } catch {
+          pickLocation({ name: 'Current location', lat: latitude, lon: longitude });
+        }
+        setLocLoading(false);
+      },
+      () => setLocLoading(false),
+      { timeout: 8000 }
+    );
+  }
+
   function save() {
     setUser({ name });
-    if (locName !== location.name) setLocation({ ...location, name: locName });
     setSavedTick(true);
     setTimeout(() => setSavedTick(false), 1500);
   }
@@ -56,9 +110,39 @@ export default function ProfilePage() {
             <label className="text-[12.5px] font-semibold text-ink-soft block mb-1.5">Name</label>
             <input className="field-input" value={name} disabled={!hasHydrated} onChange={(e) => setName(e.target.value)} />
           </div>
+
           <div className="card">
             <label className="text-[12.5px] font-semibold text-ink-soft block mb-1.5">Location</label>
-            <input className="field-input" value={locName} disabled={!hasHydrated} onChange={(e) => setLocName(e.target.value)} />
+            <div className="flex items-center gap-2 text-sm mb-2.5">
+              <MapPin size={16} className="text-navy-ink flex-none" />
+              <span>{hasHydrated ? location.name : 'Loading…'}</span>
+              {locSavedTick && <span className="text-good text-[12px] font-semibold ml-auto">Updated ✓</span>}
+            </div>
+            <input
+              className="field-input mb-2"
+              placeholder="Search for a new city"
+              value={locQuery}
+              disabled={!hasHydrated}
+              onChange={(e) => setLocQuery(e.target.value)}
+            />
+            {locLoading && <div className="text-ink-soft text-[12.5px] flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" />Searching…</div>}
+            {locResults.length > 0 && (
+              <div className="border border-hair rounded-sm overflow-hidden mb-2">
+                {locResults.map((r, i) => (
+                  <button
+                    key={i}
+                    className="w-full text-left px-3 py-2.5 text-sm active:bg-surface-2 block"
+                    onClick={() => pickLocation(r)}
+                  >
+                    {r.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button className="btn-ghost flex items-center justify-center gap-2 !py-2.5 !text-[13.5px]" onClick={useMyLocation} disabled={!hasHydrated || locLoading}>
+              <MapPin size={14} />
+              Use my current location
+            </button>
           </div>
 
           <div className="card">
