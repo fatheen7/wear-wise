@@ -1,10 +1,11 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import BottomNav from '@/components/BottomNav';
 
 export default function ProfilePage() {
+  const hasHydrated = useStore((s) => s.hasHydrated);
   const user = useStore((s) => s.user);
   const location = useStore((s) => s.location);
   const settings = useStore((s) => s.settings);
@@ -17,6 +18,18 @@ export default function ProfilePage() {
   const [name, setName] = useState(user.name);
   const [locName, setLocName] = useState(location.name);
   const [savedTick, setSavedTick] = useState(false);
+
+  // The store persists to localStorage and rehydrates asynchronously after
+  // mount. Until hasHydrated flips true, `user`/`location` are still the
+  // pre-hydration defaults, so this form's local state — seeded once above
+  // — would otherwise show blank/default values and silently overwrite the
+  // real saved data on Save. Re-sync as soon as hydration completes.
+  useEffect(() => {
+    if (!hasHydrated) return;
+    setName(user.name);
+    setLocName(location.name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasHydrated]);
 
   function save() {
     setUser({ name });
@@ -41,11 +54,11 @@ export default function ProfilePage() {
         <div className="px-5 flex flex-col gap-2.5">
           <div className="card">
             <label className="text-[12.5px] font-semibold text-ink-soft block mb-1.5">Name</label>
-            <input className="field-input" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="field-input" value={name} disabled={!hasHydrated} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="card">
             <label className="text-[12.5px] font-semibold text-ink-soft block mb-1.5">Location</label>
-            <input className="field-input" value={locName} onChange={(e) => setLocName(e.target.value)} />
+            <input className="field-input" value={locName} disabled={!hasHydrated} onChange={(e) => setLocName(e.target.value)} />
           </div>
 
           <div className="card">
@@ -74,7 +87,7 @@ export default function ProfilePage() {
           </div>
           {plan === 'free' && <Link href="/paywall" className="btn-primary text-center">Upgrade to Premium</Link>}
 
-          <button className="btn-ghost" onClick={save}>{savedTick ? 'Saved ✓' : 'Save changes'}</button>
+          <button className="btn-ghost" onClick={save} disabled={!hasHydrated}>{savedTick ? 'Saved ✓' : 'Save changes'}</button>
           <button className="btn-text w-full text-center mt-1" style={{ color: 'rgb(176 69 61)' }} onClick={reset}>Reset app data</button>
         </div>
       </div>

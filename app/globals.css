@@ -59,7 +59,7 @@ body {
 ::selection { background: rgb(var(--brass)); color: rgb(var(--navy-ink)); }
 
 @layer components {
-  .app-shell { @apply max-w-app mx-auto min-h-screen relative bg-paper flex flex-col; }
+  .app-shell { @apply max-w-app mx-auto relative bg-paper flex flex-col overflow-hidden; height: 100vh; height: 100dvh; }
   .topbar { @apply flex items-center justify-between gap-3 px-5 pt-4 pb-2; }
   .iconbtn { @apply w-10 h-10 rounded-full border border-hair bg-surface flex items-center justify-center text-ink active:scale-95 transition-transform; }
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[15px] w-full py-3.5 px-5 active:opacity-85 transition-opacity disabled:opacity-40 disabled:pointer-events-none; }

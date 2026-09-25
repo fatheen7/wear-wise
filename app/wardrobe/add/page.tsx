@@ -22,6 +22,7 @@ function AddItemForm() {
   const router = useRouter();
   const params = useSearchParams();
   const editId = params.get('id');
+  const hasHydrated = useStore((s) => s.hasHydrated);
   const wardrobe = useStore((s) => s.wardrobe);
   const plan = useStore((s) => s.subscription.plan);
   const addWardrobeItem = useStore((s) => s.addWardrobeItem);
@@ -40,9 +41,24 @@ function AddItemForm() {
   const [scanNote, setScanNote] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // On a fresh page load (direct link to ?id=..., or a refresh while
+  // editing), `wardrobe` is still empty until the persisted store
+  // rehydrates, so `editing` is undefined on first render and this form's
+  // local state gets seeded with blank defaults. The effect used to key
+  // only on `editId`, which never changes, so it never re-ran once
+  // hydration filled `wardrobe` back in — the edit form silently stayed
+  // blank. Re-run once hydration completes (and whenever the underlying
+  // item's fields change) so the real saved values show up.
   useEffect(() => {
-    if (editing) { setCategory(editing.category); setSub(editing.sub); setColor(editing.color as ColorName); setFormality(editing.formality); setName(editing.name); setPhoto(editing.photo); }
-  }, [editId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!hasHydrated || !editing) return;
+    setCategory(editing.category);
+    setSub(editing.sub);
+    setColor(editing.color as ColorName);
+    setFormality(editing.formality);
+    setName(editing.name);
+    setPhoto(editing.photo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasHydrated, editId, editing?.category, editing?.sub, editing?.color, editing?.formality, editing?.name, editing?.photo]);
 
   const atCap = !editing && plan === 'free' && wardrobe.length >= FREE_LIMITS.wardrobeItems;
 

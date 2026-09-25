@@ -10,6 +10,7 @@ import { WardrobeItem } from '@/lib/types';
 
 export default function WhyOutfitPage() {
   const router = useRouter();
+  const hasHydrated = useStore((s) => s.hasHydrated);
   const wardrobe = useStore((s) => s.wardrobe);
   const currentOutfitIds = useStore((s) => s.currentOutfitIds);
   const context = useStore((s) => s.user.defaultContext);
@@ -24,9 +25,28 @@ export default function WhyOutfitPage() {
   const reasons = candidates.find((c) => c.itemIds.join(',') === (currentOutfitIds || []).join(','))?.reasons || [];
   const sb = weather && currentOutfitIds ? scoreBreakdown(currentOutfitIds, wardrobe, weather, context) : null;
 
+  // Wait for the persisted store to rehydrate before deciding there's no
+  // outfit to show — on a fresh page load (direct link, refresh, bookmark)
+  // currentOutfitIds briefly reads as null before localStorage loads in,
+  // and redirecting on that transient state bounced people straight back
+  // to /today even though they had a saved outfit.
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!currentOutfitIds || items.length === 0) router.replace('/today');
-  }, [currentOutfitIds, items.length, router]);
+  }, [hasHydrated, currentOutfitIds, items.length, router]);
+
+  if (!hasHydrated) {
+    return (
+      <div className="app-shell">
+        <div className="topbar">
+          <Link href="/today" className="iconbtn"><ChevronLeft size={18} /></Link>
+          <h1 className="font-display text-xl font-medium">Why this outfit</h1>
+          <div className="w-10" />
+        </div>
+        <div className="px-5 text-ink-soft text-sm">Loading…</div>
+      </div>
+    );
+  }
 
   if (!currentOutfitIds || items.length === 0) {
     return null;

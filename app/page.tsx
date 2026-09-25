@@ -18,7 +18,7 @@ export default function SplashPage() {
   }, [hasHydrated, onboarded, router]);
 
   return (
-    <div className="app-shell items-center justify-center gap-3.5 text-center">
+    <div className="app-shell items-center justify-center gap-3.5 text-center overflow-y-auto">
       <div className="w-[72px] h-[72px] rounded-[20px] bg-navy flex items-center justify-center">
         <Sparkles size={32} color="#fff" strokeWidth={1.6} />
       </div>

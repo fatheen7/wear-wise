@@ -190,7 +190,7 @@ export default function OnboardingPage() {
 
 function Center({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex-1 flex flex-col justify-center px-6 py-6 [&>h1]:font-display [&>h1]:text-[28px] [&>h1]:font-medium [&>h1]:leading-tight [&>h1]:mb-2.5 [&>.lede]:text-[15px] [&>.lede]:text-ink-soft [&>.lede]:leading-relaxed [&>.lede]:mb-6 [&_label]:text-[12.5px] [&_label]:font-semibold [&_label]:text-ink-soft [&_label]:block [&_label]:mb-1.5 [&_.field]:flex [&_.field]:flex-col">
+    <div className="flex-1 overflow-y-auto flex flex-col justify-center px-6 py-6 [&>h1]:font-display [&>h1]:text-[28px] [&>h1]:font-medium [&>h1]:leading-tight [&>h1]:mb-2.5 [&>.lede]:text-[15px] [&>.lede]:text-ink-soft [&>.lede]:leading-relaxed [&>.lede]:mb-6 [&_label]:text-[12.5px] [&_label]:font-semibold [&_label]:text-ink-soft [&_label]:block [&_label]:mb-1.5 [&_.field]:flex [&_.field]:flex-col">
       {children}
     </div>
   );
